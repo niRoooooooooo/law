@@ -1,5 +1,4 @@
 
-
 {% extends "base.html" %}
 
 {% block content %}
@@ -7,11 +6,13 @@
 <div class="row justify-content-center">
     <div class="col-lg-8">
 
-        <h2 class="fw-bold">Review Agreement</h2>
+        <h2 class="fw-bold mb-3">
+            Review Your Agreement
+        </h2>
 
         <p class="text-muted">
-            Paste an agreement below to begin.
-            PDF and Word uploads will be added next.
+            Upload your agreement or paste the text
+            below. Legal analysis will be added later.
         </p>
 
         {% if error %}
@@ -20,22 +21,34 @@
         </div>
         {% endif %}
 
-        <div class="card shadow-sm">
+        <!-- FORM 1: DOCUMENT UPLOAD -->
+
+        <div class="card shadow-sm mb-4">
             <div class="card-body p-4">
 
-                <form action="/reviews/preview"
-                      method="POST">
+                <h4>Upload Document</h4>
 
-                    <!-- Agreement type -->
+                <p class="text-muted">
+                    Supported formats: PDF and DOCX
+                    (Maximum 3 MB)
+                </p>
+
+                <form
+                    action="/documents/preview"
+                    method="POST"
+                    enctype="multipart/form-data"
+                >
+
                     <div class="mb-3">
                         <label class="form-label">
                             Agreement Type
                         </label>
 
-                        <select name="agreement_type"
-                                class="form-select"
-                                required>
-
+                        <select
+                            name="agreement_type"
+                            class="form-select"
+                            required
+                        >
                             <option value="house_rent">
                                 House Rent
                             </option>
@@ -47,13 +60,71 @@
                             <option value="service">
                                 Service / Freelance
                             </option>
-
                         </select>
                     </div>
 
-                    <!-- Agreement text -->
                     <div class="mb-3">
+                        <label class="form-label">
+                            Select Document
+                        </label>
 
+                        <input
+                            type="file"
+                            name="document"
+                            class="form-control"
+                            accept=".pdf,.docx"
+                            required
+                        >
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary w-100"
+                    >
+                        Extract Document Text
+                    </button>
+
+                </form>
+            </div>
+        </div>
+
+        <!-- FORM 2: PASTE AGREEMENT TEXT -->
+
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+
+                <h4>Or Paste Agreement Text</h4>
+
+                <form
+                    action="/reviews/preview"
+                    method="POST"
+                >
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Agreement Type
+                        </label>
+
+                        <select
+                            name="agreement_type"
+                            class="form-select"
+                            required
+                        >
+                            <option value="house_rent">
+                                House Rent
+                            </option>
+
+                            <option value="employment">
+                                Employment
+                            </option>
+
+                            <option value="service">
+                                Service / Freelance
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
                         <label class="form-label">
                             Agreement Text
                         </label>
@@ -61,31 +132,32 @@
                         <textarea
                             name="agreement_text"
                             class="form-control"
-                            rows="12"
+                            rows="10"
                             maxlength="20000"
-                            placeholder="Paste your Bangla or English agreement here..."
-                            required>{{ agreement_text }}</textarea>
-
+                            required
+                        >{{ agreement_text }}</textarea>
                     </div>
 
-                    <button type="submit"
-                            class="btn btn-primary w-100">
-                        Submit Agreement
+                    <button
+                        type="submit"
+                        class="btn btn-outline-primary w-100"
+                    >
+                        Preview Agreement
                     </button>
 
                 </form>
-
             </div>
         </div>
 
         <p class="small text-muted mt-3">
-            Development mode: this form currently
-            validates and previews text only.
-            Do not submit confidential documents yet.
+            Development version: documents are
+            processed for preview only. Avoid
+            uploading private agreements until
+            authentication and secure processing
+            have been implemented.
         </p>
 
     </div>
 </div>
-
 
 {% endblock %}
