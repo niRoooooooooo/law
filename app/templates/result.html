@@ -1,0 +1,68 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+
+        <div class="alert alert-success">
+            Agreement received successfully!
+        </div>
+
+        <h2 class="fw-bold mb-4">
+            Agreement Submission
+        </h2>
+
+        <div class="card mb-4">
+            <div class="card-body">
+
+                <h5>Document Information</h5>
+
+                <hr>
+
+                <p>
+                    <strong>Agreement Type:</strong>
+                    {{ agreement_type }}
+                </p>
+
+                <p>
+                    <strong>Characters:</strong>
+                    {{ character_count }}
+                </p>
+
+                <p>
+                    <strong>Words:</strong>
+                    {{ word_count }}
+                </p>
+
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+
+                <h5>Agreement Preview</h5>
+
+                <hr>
+
+                <div class="agreement-text">{{ preview_text }}</div>
+
+            </div>
+        </div>
+
+        <div class="alert alert-warning">
+            Legal risk analysis is not active yet.
+            No clauses or legal references have
+            been verified.
+        </div>
+
+        <a href="/review"
+           class="btn btn-outline-primary">
+            Review Another Agreement
+        </a>
+
+    </div>
+</div>
+
+{% endblock %}

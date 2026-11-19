@@ -1,0 +1,84 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="hero text-center py-5">
+
+    <h1 class="fw-bold mb-3">
+        Understand Your Agreement
+        Before Signing
+    </h1>
+
+    <p class="lead text-muted">
+        AI-powered agreement review for Bangladesh.
+        Understand risks, identify missing clauses,
+        and make informed decisions.
+    </p>
+
+    <a href="/review"
+       class="btn btn-primary btn-lg mt-3">
+        Review Your Agreement
+    </a>
+
+</section>
+
+<section class="py-5">
+
+    <h3 class="text-center mb-4">
+        Supported Agreement Types
+    </h3>
+
+    <div class="row g-4">
+
+        <div class="col-md-4">
+            <div class="card h-100 p-3">
+                <div class="card-body">
+                    <h5>House Rent</h5>
+                    <p class="text-muted">
+                        Review rental terms, deposits,
+                        notice periods and responsibilities.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 p-3">
+                <div class="card-body">
+                    <h5>Employment</h5>
+                    <p class="text-muted">
+                        Understand employment terms,
+                        obligations and important clauses.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 p-3">
+                <div class="card-body">
+                    <h5>Service / Freelance</h5>
+                    <p class="text-muted">
+                        Review service conditions,
+                        payments and deliverables.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</section>
+
+<section class="text-center py-4">
+    <h4>How Tor Lawyer Works</h4>
+    <p class="text-muted">
+        Submit Agreement → Analyze → Verify → Report
+    </p>
+    <small class="text-muted">
+        AI analysis is under development.
+    </small>
+</section>
+
+{% endblock %}

@@ -1,0 +1,89 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+
+        <h2 class="fw-bold">Review Agreement</h2>
+
+        <p class="text-muted">
+            Paste an agreement below to begin.
+            PDF and Word uploads will be added next.
+        </p>
+
+        {% if error %}
+        <div class="alert alert-danger">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+
+                <form action="/reviews/preview"
+                      method="POST">
+
+                    <!-- Agreement type -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Agreement Type
+                        </label>
+
+                        <select name="agreement_type"
+                                class="form-select"
+                                required>
+
+                            <option value="house_rent">
+                                House Rent
+                            </option>
+
+                            <option value="employment">
+                                Employment
+                            </option>
+
+                            <option value="service">
+                                Service / Freelance
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <!-- Agreement text -->
+                    <div class="mb-3">
+
+                        <label class="form-label">
+                            Agreement Text
+                        </label>
+
+                        <textarea
+                            name="agreement_text"
+                            class="form-control"
+                            rows="12"
+                            maxlength="20000"
+                            placeholder="Paste your Bangla or English agreement here..."
+                            required>{{ agreement_text }}</textarea>
+
+                    </div>
+
+                    <button type="submit"
+                            class="btn btn-primary w-100">
+                        Submit Agreement
+                    </button>
+
+                </form>
+
+            </div>
+        </div>
+
+        <p class="small text-muted mt-3">
+            Development mode: this form currently
+            validates and previews text only.
+            Do not submit confidential documents yet.
+        </p>
+
+    </div>
+</div>
+
+{% endblock %}
