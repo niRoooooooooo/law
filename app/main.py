@@ -3,9 +3,10 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.config import BASE_DIR
-from app.routes import pages, reviews, documents
+from app.routes import pages, reviews, documents, intake
 
 
+# Initialize FastAPI
 app = FastAPI(
     title="Tor Lawyer",
     description="AI Agreement Review Platform for Bangladesh",
@@ -13,7 +14,7 @@ app = FastAPI(
 )
 
 
-# Connect CSS files
+# Connect CSS and static files
 app.mount(
     "/static",
     StaticFiles(
@@ -23,11 +24,8 @@ app.mount(
 )
 
 
-# Connect HTML pages
+# Register all routers (only once)
 app.include_router(pages.router)
-
-# Connect text agreement submissions
 app.include_router(reviews.router)
-
-# Connect document upload submissions
 app.include_router(documents.router)
+app.include_router(intake.router)

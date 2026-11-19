@@ -1,0 +1,91 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+
+        <h2>AI Intake Results</h2>
+
+        <div class="alert alert-info">
+            Preliminary AI extraction only.
+            Legal analysis is not active yet.
+        </div>
+
+        <div class="card p-4 mb-3">
+            <h4>Agreement Information</h4>
+
+            <p>
+                <strong>Agreement Type:</strong>
+                {{ analysis.agreement_type }}
+            </p>
+
+            <p>
+                <strong>Language:</strong>
+                {{ analysis.language }}
+            </p>
+
+            <p>
+                <strong>User Role:</strong>
+                {{ analysis.user_role }}
+            </p>
+
+            <p>
+                <strong>Characters:</strong>
+                {{ character_count }}
+            </p>
+        </div>
+
+        <div class="card p-4 mb-3">
+            <h4>Identified Parties</h4>
+
+            {% for party in analysis.parties %}
+                <p>{{ party }}</p>
+            {% else %}
+                <p>No parties identified.</p>
+            {% endfor %}
+        </div>
+
+        <div class="card p-4 mb-3">
+            <h4>Extracted Clauses</h4>
+
+            {% for clause in analysis.clauses %}
+                <div class="border-bottom py-3">
+                    <h6>
+                        {{ loop.index }}.
+                        {{ clause.title }}
+                    </h6>
+                    <p class="agreement-text">{{ clause.exact_text }}</p>
+                </div>
+            {% else %}
+                <p>No matching clauses found.</p>
+            {% endfor %}
+        </div>
+
+        <div class="card p-4 mb-3">
+            <h4>Clarification Questions</h4>
+
+            {% for question in
+                analysis.clarification_questions %}
+
+                <p>{{ loop.index }}. {{ question }}</p>
+
+            {% else %}
+                <p>No questions generated.</p>
+            {% endfor %}
+        </div>
+
+        <div class="alert alert-warning">
+            Results have not been checked against
+            Bangladesh law. They are not legal advice.
+        </div>
+
+        <a href="/review" class="btn btn-primary">
+            Analyze Another Agreement
+        </a>
+
+    </div>
+</div>
+
+{% endblock %}

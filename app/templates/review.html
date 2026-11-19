@@ -6,31 +6,39 @@
 <div class="row justify-content-center">
     <div class="col-lg-8">
 
+        <!-- Page heading -->
         <h2 class="fw-bold mb-3">
             Review Your Agreement
         </h2>
 
         <p class="text-muted">
-            Upload your agreement or paste the text
-            below. Legal analysis will be added later.
+            Upload your agreement or paste the text below.
+            Tor Lawyer can extract document information
+            using our local Qwen AI model.
         </p>
 
+        <!-- Error message -->
         {% if error %}
         <div class="alert alert-danger">
             {{ error }}
         </div>
         {% endif %}
 
-        <!-- FORM 1: DOCUMENT UPLOAD -->
+
+        <!-- ================================= -->
+        <!-- FORM 1: PDF / DOCX UPLOAD         -->
+        <!-- ================================= -->
 
         <div class="card shadow-sm mb-4">
             <div class="card-body p-4">
 
-                <h4>Upload Document</h4>
+                <h4 class="fw-bold mb-3">
+                    Upload Document
+                </h4>
 
                 <p class="text-muted">
-                    Supported formats: PDF and DOCX
-                    (Maximum 3 MB)
+                    Supported formats: PDF and DOCX.
+                    Maximum file size: 3 MB.
                 </p>
 
                 <form
@@ -39,12 +47,17 @@
                     enctype="multipart/form-data"
                 >
 
+                    <!-- Agreement Type -->
                     <div class="mb-3">
-                        <label class="form-label">
+                        <label
+                            for="uploadAgreementType"
+                            class="form-label"
+                        >
                             Agreement Type
                         </label>
 
                         <select
+                            id="uploadAgreementType"
                             name="agreement_type"
                             class="form-select"
                             required
@@ -63,49 +76,85 @@
                         </select>
                     </div>
 
+                    <!-- Document Upload -->
                     <div class="mb-3">
-                        <label class="form-label">
+                        <label
+                            for="agreementDocument"
+                            class="form-label"
+                        >
                             Select Document
                         </label>
 
                         <input
                             type="file"
+                            id="agreementDocument"
                             name="document"
                             class="form-control"
                             accept=".pdf,.docx"
                             required
                         >
+
+                        <div class="form-text">
+                            Upload a PDF or Word document.
+                            Scanned PDFs requiring OCR
+                            are not supported yet.
+                        </div>
                     </div>
 
+                    <!-- Button 1: Extract text only -->
                     <button
                         type="submit"
-                        class="btn btn-primary w-100"
+                        class="btn btn-outline-primary w-100 mb-2"
                     >
                         Extract Document Text
+                    </button>
+
+                    <!-- Button 2: AI document analysis -->
+                    <button
+                        type="submit"
+                        formaction="/intake/analyze"
+                        class="btn btn-success w-100"
+                    >
+                        Analyze Document with AI
                     </button>
 
                 </form>
             </div>
         </div>
 
-        <!-- FORM 2: PASTE AGREEMENT TEXT -->
 
-        <div class="card shadow-sm">
+        <!-- ================================= -->
+        <!-- FORM 2: PASTE AGREEMENT TEXT     -->
+        <!-- ================================= -->
+
+        <div class="card shadow-sm mb-4">
             <div class="card-body p-4">
 
-                <h4>Or Paste Agreement Text</h4>
+                <h4 class="fw-bold mb-3">
+                    Or Paste Agreement Text
+                </h4>
+
+                <p class="text-muted">
+                    Paste an agreement written in
+                    Bangla or English.
+                </p>
 
                 <form
                     action="/reviews/preview"
                     method="POST"
                 >
 
+                    <!-- Agreement Type -->
                     <div class="mb-3">
-                        <label class="form-label">
+                        <label
+                            for="textAgreementType"
+                            class="form-label"
+                        >
                             Agreement Type
                         </label>
 
                         <select
+                            id="textAgreementType"
                             name="agreement_type"
                             class="form-select"
                             required
@@ -124,38 +173,83 @@
                         </select>
                     </div>
 
+                    <!-- Agreement Text -->
                     <div class="mb-3">
-                        <label class="form-label">
+                        <label
+                            for="agreementText"
+                            class="form-label"
+                        >
                             Agreement Text
                         </label>
 
                         <textarea
+                            id="agreementText"
                             name="agreement_text"
                             class="form-control"
                             rows="10"
                             maxlength="20000"
+                            placeholder="Paste your agreement here..."
                             required
-                        >{{ agreement_text }}</textarea>
+                        >{{ agreement_text | default('', true) }}</textarea>
+
+                        <div class="form-text">
+                            Text preview supports up to
+                            20,000 characters.
+                            AI analysis currently supports
+                            up to 6,000 characters.
+                        </div>
                     </div>
 
+                    <!-- Button 1: Preview text only -->
                     <button
                         type="submit"
-                        class="btn btn-outline-primary w-100"
+                        class="btn btn-outline-primary w-100 mb-2"
                     >
                         Preview Agreement
+                    </button>
+
+                    <!-- Button 2: AI text analysis -->
+                    <button
+                        type="submit"
+                        formaction="/intake/analyze"
+                        class="btn btn-success w-100"
+                    >
+                        Analyze Text with AI
                     </button>
 
                 </form>
             </div>
         </div>
 
-        <p class="small text-muted mt-3">
-            Development version: documents are
-            processed for preview only. Avoid
-            uploading private agreements until
-            authentication and secure processing
-            have been implemented.
-        </p>
+
+        <!-- ================================= -->
+        <!-- PRIVACY AND LEGAL NOTICE         -->
+        <!-- ================================= -->
+
+        <div class="alert alert-light border">
+
+            <h6 class="fw-bold">
+                Important Notice
+            </h6>
+
+            <p class="small mb-2">
+                Tor Lawyer is currently in development.
+                AI analysis only identifies agreement
+                information and extracts clauses.
+                Legal risk analysis and verification
+                against Bangladesh law are not active yet.
+            </p>
+
+            <p class="small mb-0">
+                Please use fictional or non-confidential
+                agreements for testing until private
+                storage, authentication and additional
+                security protections are implemented.
+                Tor Lawyer is not a substitute for
+                advice from a licensed lawyer.
+            </p>
+
+        </div>
 
     </div>
 </div>
