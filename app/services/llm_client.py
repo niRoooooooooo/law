@@ -115,6 +115,10 @@ IMPORTANT EXTRACTION RULES:
             }
         ],
         format=IntakeResult.model_json_schema(),
+
+        # Disable thinking for faster extraction
+        think=False,
+
         options={
             "temperature": 0,
             "num_ctx": 8192,

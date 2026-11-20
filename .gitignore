@@ -31,3 +31,13 @@ htmlcov/
 *.tmp
 .DS_Store
 Thumbs.db
+
+# Uploaded legal source documents
+data/legal_sources/
+
+# Generated document indexes
+data/legal_index/
+
+# Local database files
+*.db
+*.sqlite3

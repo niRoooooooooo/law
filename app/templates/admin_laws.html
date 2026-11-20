@@ -1,0 +1,524 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1">
+
+    <title>Legal Sources Admin | Tor Lawyer</title>
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 30px 18px;
+            background: #f3f5f9;
+            color: #202c3d;
+            font-family: Arial, sans-serif;
+        }
+
+        main {
+            max-width: 950px;
+            margin: auto;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #e1e6ee;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 22px 0;
+        }
+
+        h1 { margin-bottom: 8px; }
+        h2 { font-size: 20px; }
+        p { line-height: 1.5; }
+
+        .muted { color: #64748b; }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin: 15px 0 6px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 11px;
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+            background: white;
+        }
+
+        input[type="checkbox"] {
+            width: auto;
+        }
+
+        button {
+            padding: 11px 17px;
+            border: 0;
+            background: #2455cd;
+            color: white;
+            border-radius: 7px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        button:hover { background: #163e9e; }
+
+        .small-button {
+            padding: 8px 11px;
+            font-size: 13px;
+            margin: 3px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .document {
+            padding: 15px 0;
+            border-bottom: 1px solid #e1e6ee;
+        }
+
+        .document:last-child {
+            border-bottom: none;
+        }
+
+        .document-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 450px;
+            overflow-y: auto;
+        }
+
+        #status {
+            white-space: pre-wrap;
+            margin-top: 15px;
+        }
+
+        @media (max-width: 650px) {
+            .row { grid-template-columns: 1fr; }
+            .card { padding: 18px; }
+        }
+    </style>
+</head>
+
+<body>
+<main>
+
+    <a href="/review">Back to Agreement Review</a>
+
+    <h1>Tor Lawyer — Legal Sources Admin</h1>
+
+    <p class="muted">
+        Upload and manage legal source documents.
+        Supported formats: PDF and DOCX.
+        Maximum file size: 15 MB.
+    </p>
+
+    <!-- ADMIN KEY -->
+
+    <section class="card">
+        <h2>Admin Access</h2>
+
+        <label for="adminKey">Admin API Key</label>
+        <input
+            type="password"
+            id="adminKey"
+            autocomplete="off"
+            placeholder="Enter your admin key"
+        >
+
+        <button type="button" id="loadButton">
+            Load Legal Sources
+        </button>
+
+        <p class="muted">
+            The key is used for API requests and is
+            not saved in browser storage.
+        </p>
+    </section>
+
+    <!-- UPLOAD DOCUMENT -->
+
+    <section class="card">
+        <h2>Upload New Legal Document</h2>
+
+        <form id="uploadForm">
+
+            <label for="title">Document Title</label>
+            <input
+                type="text"
+                id="title"
+                required
+                minlength="3"
+                maxlength="200"
+                placeholder="Example: Demo House Rent Law"
+            >
+
+            <div class="row">
+
+                <div>
+                    <label for="jurisdiction">
+                        Jurisdiction
+                    </label>
+
+                    <select id="jurisdiction">
+                        <option value="BD">Bangladesh</option>
+                        <option value="IN">India</option>
+                        <option value="GB">United Kingdom</option>
+                        <option value="US">United States</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="agreementType">
+                        Agreement Type
+                    </label>
+
+                    <select id="agreementType">
+                        <option value="house_rent">
+                            House Rent
+                        </option>
+                        <option value="employment">
+                            Employment
+                        </option>
+                        <option value="service">
+                            Service / Freelance
+                        </option>
+                    </select>
+                </div>
+
+            </div>
+
+            <label for="lawFile">Select PDF or DOCX</label>
+
+            <input
+                type="file"
+                id="lawFile"
+                accept=".pdf,.docx"
+                required
+            >
+
+            <label>
+                <input
+                    type="checkbox"
+                    id="isDemo"
+                    checked
+                >
+                This is a demo/test document
+            </label>
+
+            <button type="submit">
+                Upload Legal Source
+            </button>
+        </form>
+
+        <p class="muted">
+            Real documents require verification before
+            they can support legal conclusions.
+        </p>
+    </section>
+
+    <!-- SAVED DOCUMENTS -->
+
+    <section class="card">
+        <h2>Uploaded Legal Documents</h2>
+
+        <div id="documentList">
+            Enter your admin key and click
+            Load Legal Sources.
+        </div>
+    </section>
+
+    <!-- DOCUMENT DETAILS -->
+
+    <section class="card">
+        <h2>Extracted Legal Sections</h2>
+
+        <pre id="documentDetails">
+Select View Sections beside a document.
+        </pre>
+    </section>
+
+    <p id="status" role="status" aria-live="polite"></p>
+
+</main>
+
+<script>
+    const API = "/admin/legal-sources/";
+
+    const getElement = (id) =>
+        document.getElementById(id);
+
+    function getHeaders() {
+        const key = getElement("adminKey").value.trim();
+
+        if (!key) {
+            throw new Error("Enter your admin key first.");
+        }
+
+        return {
+            "X-Admin-Key": key
+        };
+    }
+
+    function setStatus(message) {
+        getElement("status").textContent = message;
+    }
+
+    async function apiRequest(path, options = {}) {
+        const response = await fetch(API + path, {
+            ...options,
+            cache: "no-store",
+            headers: {
+                ...getHeaders(),
+                ...(options.headers || {})
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                typeof data.detail === "string"
+                    ? data.detail
+                    : JSON.stringify(data.detail)
+            );
+        }
+
+        return data;
+    }
+
+    // ------------------------------------
+    // UPLOAD LEGAL DOCUMENT
+    // ------------------------------------
+
+    getElement("uploadForm").addEventListener(
+        "submit",
+        async (event) => {
+            event.preventDefault();
+
+            const file = getElement("lawFile").files[0];
+
+            if (!file) {
+                setStatus("Please select a document.");
+                return;
+            }
+
+            if (file.size > 15 * 1024 * 1024) {
+                setStatus("File exceeds the 15 MB limit.");
+                return;
+            }
+
+            const formData = new FormData();
+
+            formData.append(
+                "title",
+                getElement("title").value
+            );
+
+            formData.append(
+                "jurisdiction",
+                getElement("jurisdiction").value
+            );
+
+            formData.append(
+                "agreement_type",
+                getElement("agreementType").value
+            );
+
+            formData.append(
+                "is_demo",
+                getElement("isDemo").checked
+            );
+
+            formData.append("file", file);
+
+            try {
+                setStatus("Uploading document...");
+
+                const result = await apiRequest("", {
+                    method: "POST",
+                    body: formData
+                });
+
+                setStatus(result.message);
+
+                getElement("uploadForm").reset();
+
+                await loadDocuments();
+
+            } catch (error) {
+                setStatus("Error: " + error.message);
+            }
+        }
+    );
+
+    // ------------------------------------
+    // LOAD LEGAL DOCUMENTS
+    // ------------------------------------
+
+    async function loadDocuments() {
+        const result = await apiRequest("");
+
+        const container = getElement("documentList");
+        container.replaceChildren();
+
+        if (result.documents.length === 0) {
+            container.textContent =
+                "No legal documents uploaded yet.";
+            return;
+        }
+
+        for (const doc of result.documents) {
+            const item = document.createElement("div");
+            item.className = "document";
+
+            const title = document.createElement("div");
+            title.className = "document-title";
+            title.textContent = doc.title;
+
+            const info = document.createElement("p");
+            info.className = "muted";
+            info.textContent =
+                `${doc.jurisdiction} | ` +
+                `${doc.agreement_type} | ` +
+                `Version ${doc.version} | ` +
+                `${doc.verification_status}`;
+
+            const viewButton =
+                document.createElement("button");
+
+            viewButton.type = "button";
+            viewButton.className = "small-button";
+            viewButton.textContent = "View Sections";
+
+            viewButton.onclick = () =>
+                viewDocument(doc.document_id);
+
+            const replacement =
+                document.createElement("input");
+
+            replacement.type = "file";
+            replacement.accept = ".pdf,.docx";
+
+            const replaceButton =
+                document.createElement("button");
+
+            replaceButton.type = "button";
+            replaceButton.className = "small-button";
+            replaceButton.textContent = "Replace Document";
+
+            replaceButton.onclick = () =>
+                replaceDocument(
+                    doc.document_id,
+                    replacement.files[0]
+                );
+
+            item.append(
+                title,
+                info,
+                viewButton,
+                replacement,
+                replaceButton
+            );
+
+            container.appendChild(item);
+        }
+    }
+
+    // ------------------------------------
+    // VIEW EXTRACTED SECTIONS
+    // ------------------------------------
+
+    async function viewDocument(documentId) {
+        try {
+            const data = await apiRequest(documentId);
+
+            const lines = [
+                `Title: ${data.source.title}`,
+                `Version: ${data.source.version}`,
+                `Status: ${data.source.verification_status}`,
+                `Sections: ${data.sections.length}`,
+                ""
+            ];
+
+            for (const section of data.sections) {
+                lines.push(section.heading);
+                lines.push(section.content);
+                lines.push(
+                    `Page: ${section.page_start ?? "N/A"}`
+                );
+                lines.push("");
+            }
+
+            getElement("documentDetails").textContent =
+                lines.join("\n");
+
+        } catch (error) {
+            setStatus("Error: " + error.message);
+        }
+    }
+
+    // ------------------------------------
+    // REPLACE LEGAL DOCUMENT
+    // ------------------------------------
+
+    async function replaceDocument(documentId, file) {
+        if (!file) {
+            setStatus("Select a replacement file first.");
+            return;
+        }
+
+        if (file.size > 15 * 1024 * 1024) {
+            setStatus("File exceeds the 15 MB limit.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const result = await apiRequest(
+                `${documentId}/replace`,
+                {
+                    method: "POST",
+                    body: formData
+                }
+            );
+
+            setStatus(result.message);
+            await loadDocuments();
+
+        } catch (error) {
+            setStatus("Error: " + error.message);
+        }
+    }
+
+    getElement("loadButton").onclick = async () => {
+        try {
+            await loadDocuments();
+            setStatus("Legal sources loaded.");
+        } catch (error) {
+            setStatus("Error: " + error.message);
+        }
+    };
+</script>
+
+</body>
+</html>
