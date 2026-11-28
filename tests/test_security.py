@@ -206,14 +206,18 @@ def test_admin_page_served_after_login_without_key():
     assert response.headers["x-frame-options"] == "DENY"
 
 
-def test_login_page_redirects_when_already_signed_in():
+def test_login_page_ends_existing_session(fake_repository):
+    # F1: the login form always asks for the key again
     client = make_client()
     login(client)
+    token = client.cookies.get(COOKIE)
 
     response = client.get("/admin/login")
 
-    assert response.status_code == 303
-    assert response.headers["location"] == "/admin/laws"
+    assert response.status_code == 200
+    assert 'name="admin_key"' in response.text
+    client.cookies.set(COOKIE, token)
+    assert client.get("/admin/legal-sources/").status_code == 403
 
 
 def test_session_expires():

@@ -97,6 +97,9 @@ def admin_key_matches(given: str | None, settings: SecuritySettings) -> bool:
 class _Session:
     expires_at: float
     created_at: float
+    # Single-use permission to load the admin page once (F1).
+    # Issued at login, consumed by the first /admin/laws load.
+    page_entry_pending: bool = True
 
 
 class AdminSessionStore:
@@ -156,6 +159,35 @@ class AdminSessionStore:
                 del self._sessions[key]
                 return False
 
+            return True
+
+    def consume_page_entry(self, token: str | None) -> bool:
+        """
+        Atomically use the session's one-time page entry.
+
+        True only for the first admin-page load after login. Any
+        later load (refresh, back, re-opening the page) returns
+        False and revokes the session, so the key is needed again.
+        AJAX calls are unaffected: they only use is_valid().
+        """
+        if not token or len(token) > 128:
+            return False
+
+        key = self._hash(token)
+        now = self._clock()
+
+        with self._lock:
+            session = self._sessions.get(key)
+
+            if session is None or session.expires_at <= now:
+                self._sessions.pop(key, None)
+                return False
+
+            if not session.page_entry_pending:
+                del self._sessions[key]
+                return False
+
+            session.page_entry_pending = False
             return True
 
     def revoke(self, token: str | None) -> None:

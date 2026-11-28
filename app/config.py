@@ -7,11 +7,16 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi.templating import Jinja2Templates
 
-# Load .env before reading settings (existing values are not overridden)
-load_dotenv()
-
 # Location of the app folder
 BASE_DIR = Path(__file__).resolve().parent
+
+# Load the project's .env by explicit path (existing environment
+# values are not overridden). A bare load_dotenv() searches from the
+# current directory inside `uvicorn --reload` workers, so starting
+# the server outside the project silently skipped .env and the
+# admin routes were never registered (404).
+ENV_FILE = BASE_DIR.parent / ".env"
+ENV_FILE_LOADED = load_dotenv(ENV_FILE)
 
 # Connect the HTML templates folder
 templates = Jinja2Templates(

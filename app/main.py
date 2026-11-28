@@ -4,7 +4,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app.config import BASE_DIR, SecuritySettings
+from app.config import BASE_DIR, ENV_FILE_LOADED, SecuritySettings
 from app.routes import auth, pages, reviews, documents, intake, legal_sources
 from app.security import AccessControlMiddleware, AdminSessionStore
 from app.services.ai_limits import ConcurrencyLimiter, RateLimiter
@@ -17,6 +17,15 @@ def create_app(settings: SecuritySettings | None = None) -> FastAPI:
 
     # Fail closed: refuse to start with unsafe settings
     settings.validate()
+
+    # One startup line (no secrets) so a missing .env or disabled
+    # admin is visible in the server terminal instead of a silent 404
+    logging.getLogger("uvicorn.error").info(
+        "Tor Lawyer: .env %s; Legal Sources admin routes %s.",
+        "loaded" if ENV_FILE_LOADED else "NOT FOUND",
+        "ENABLED" if settings.admin_enabled else "disabled "
+        "(/admin/* returns 404; set TOR_LAW_ADMIN_ENABLED=1)",
+    )
 
     if settings.allow_tunnel_ai:
         logging.getLogger(__name__).warning(

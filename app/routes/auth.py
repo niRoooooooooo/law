@@ -1,5 +1,14 @@
 
-"""Admin login flow for the Legal Sources page (Phase P0A.2)."""
+"""
+Admin login flow for the Legal Sources page (Phase P0A.2, F1).
+
+Every visit to the admin page needs the administrator key:
+login issues a session with a single-use page entry; the first
+/admin/laws load consumes it. A refresh, a back/forward visit or
+re-opening the page later finds it used up, revokes the session
+on the server and sends the browser to /admin/login. AJAX calls
+from the open page keep working with the same session.
+"""
 
 import logging
 
@@ -16,7 +25,6 @@ from app.security import (
     ADMIN_REQUEST_HEADER,
     admin_key_matches,
     get_security,
-    has_admin_session,
     session_cookie_name,
     session_token_from_headers,
     scope_headers,
@@ -27,11 +35,24 @@ router = APIRouter(prefix="/admin", include_in_schema=False)
 logger = logging.getLogger(__name__)
 
 
-def _has_session(request: Request) -> bool:
-    settings, store = get_security(request)
-    return has_admin_session(
-        scope_headers(request.scope), settings, store
+def _clear_session_cookie(response, settings) -> None:
+    response.delete_cookie(
+        key=session_cookie_name(settings),
+        path="/",
+        secure=settings.admin_cookie_secure,
+        httponly=True,
+        samesite="strict",
     )
+
+
+def _end_browser_session(request: Request, response) -> None:
+    """Revoke the request's admin session (if any) and clear its cookie."""
+    settings, store = get_security(request)
+    token = session_token_from_headers(scope_headers(request.scope), settings)
+
+    if token:
+        store.revoke(token)
+        _clear_session_cookie(response, settings)
 
 
 def _login_page(request: Request, error: str | None, status_code: int):
@@ -47,10 +68,11 @@ def _login_page(request: Request, error: str | None, status_code: int):
 @router.get("/login")
 def admin_login_page(request: Request):
 
-    if _has_session(request):
-        return RedirectResponse("/admin/laws", status_code=303)
-
-    return _login_page(request, None, 200)
+    # Showing the login form ends any earlier session: the key
+    # must be entered again to reach the admin page.
+    response = _login_page(request, None, 200)
+    _end_browser_session(request, response)
+    return response
 
 
 @router.post("/login")
@@ -102,13 +124,7 @@ def admin_logout(request: Request):
     )
 
     response = JSONResponse({"message": "Logged out."})
-    response.delete_cookie(
-        key=session_cookie_name(settings),
-        path="/",
-        secure=settings.admin_cookie_secure,
-        httponly=True,
-        samesite="strict",
-    )
+    _clear_session_cookie(response, settings)
     response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -116,9 +132,18 @@ def admin_logout(request: Request):
 @router.get("/laws")
 def admin_laws_page(request: Request):
 
-    # Server-side check: no session, no admin page
-    if not _has_session(request):
-        return RedirectResponse("/admin/login", status_code=303)
+    settings, store = get_security(request)
+    token = session_token_from_headers(scope_headers(request.scope), settings)
+
+    # Server-side check: only the first page load after login is
+    # allowed. Refresh / revisit revokes the session (done inside
+    # consume_page_entry) and asks for the key again.
+    if not store.consume_page_entry(token):
+        response = RedirectResponse("/admin/login", status_code=303)
+        response.headers["Cache-Control"] = "no-store"
+        if token:
+            _clear_session_cookie(response, settings)
+        return response
 
     return FileResponse(
         path=BASE_DIR / "templates" / "admin_laws.html",
