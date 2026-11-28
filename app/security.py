@@ -5,8 +5,10 @@ Access security (Phase P0A.2).
 - The public website is open.
 - Legal Sources admin (page + API) needs either a short-lived
   admin browser session or the X-Admin-Key header.
-- AI endpoints are restricted (direct local requests or an admin
-  session) until resource protections exist.
+- AI endpoints are restricted (direct local requests, an admin
+  session, or - only with TOR_LAW_ALLOW_TUNNEL_AI=1 - requests
+  arriving through the local Cloudflare Tunnel). Allowed requests are then rate limited per client and
+  rejected early while the inference slot is busy (P0B.1).
 
 AccessControlMiddleware is pure ASGI: it runs before routing and
 before any form/multipart body is read or parsed. It never logs
@@ -17,6 +19,7 @@ This is temporary access control, not production authentication.
 
 import hashlib
 import hmac
+import logging
 import secrets
 import threading
 import time
@@ -28,7 +31,15 @@ from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.config import SecuritySettings, templates
+from app.services.ai_limits import (
+    ConcurrencyLimiter,
+    RateLimiter,
+    client_key,
+    tunnel_client_ip,
+)
 
+
+logger = logging.getLogger(__name__)
 
 ADMIN_API_PREFIX = "/admin/legal-sources"
 
@@ -263,6 +274,14 @@ def ai_access_allowed(
     if is_direct_local_request(client_host, headers):
         return True
 
+    # Temporary team testing through Cloudflare Tunnel (opt-in).
+    # Rate limit and concurrency limit still apply afterwards.
+    if (
+        settings.allow_tunnel_ai
+        and tunnel_client_ip(client_host, headers) is not None
+    ):
+        return True
+
     return (
         settings.admin_enabled
         and has_admin_session(headers, settings, store)
@@ -308,17 +327,77 @@ def require_admin(request: Request) -> None:
 # Pre-body access gate
 # ------------------------------------------
 
+def review_error_response(
+    scope: Scope,
+    receive: Receive,
+    message: str,
+    status_code: int,
+    retry_after: int | None = None
+):
+    headers = {"Cache-Control": "no-store"}
+
+    if retry_after is not None:
+        headers["Retry-After"] = str(retry_after)
+
+    return templates.TemplateResponse(
+        request=Request(scope, receive),
+        name="review.html",
+        context={"error": message, "agreement_text": ""},
+        status_code=status_code,
+        headers=headers
+    )
+
+
+AI_BUSY_MESSAGE = (
+    "The AI analyser is busy with another agreement. "
+    "Please try again in a minute."
+)
+
+AI_BUSY_RETRY_SECONDS = 30
+
 class AccessControlMiddleware:
 
     def __init__(
         self,
         app: ASGIApp,
         settings: SecuritySettings,
-        store: AdminSessionStore
+        store: AdminSessionStore,
+        rate_limiter: RateLimiter | None = None,
+        inference_limiter: ConcurrencyLimiter | None = None
     ):
         self.app = app
         self.settings = settings
         self.store = store
+        self.rate_limiter = rate_limiter
+        self.inference_limiter = inference_limiter
+        self._proxy_warning_logged = False
+
+    def _warn_if_proxy_rewritten(
+        self,
+        client_host: str | None,
+        headers: dict[str, str]
+    ) -> None:
+        """
+        Diagnostic only (never grants access). With uvicorn's
+        default --proxy-headers, tunnel requests reach the app with
+        the visitor's IP as the peer instead of 127.0.0.1, so
+        TOR_LAW_ALLOW_TUNNEL_AI cannot recognise them.
+        """
+        if (
+            self._proxy_warning_logged
+            or not self.settings.allow_tunnel_ai
+            or not headers.get("cf-ray")
+            or client_host in LOOPBACK_HOSTS
+        ):
+            return
+
+        self._proxy_warning_logged = True
+        logger.warning(
+            "Tunnel request seen from a non-loopback peer while "
+            "TOR_LAW_ALLOW_TUNNEL_AI=1. Uvicorn proxy headers are "
+            "probably enabled; start with scripts/run_server.py or "
+            "add --no-proxy-headers."
+        )
 
     async def __call__(
         self,
@@ -355,31 +434,61 @@ class AccessControlMiddleware:
                 await response(scope, receive, send)
                 return
 
-        # AI endpoints: restricted until resource protection exists
+        # AI endpoints: access check, then resource protection
         if path in AI_PATHS:
 
             client = scope.get("client")
             client_host = client[0] if client else None
 
+            # 1. Access restriction always runs first
             if not ai_access_allowed(
                 client_host, headers, self.settings, self.store
             ):
-                response = templates.TemplateResponse(
-                    request=Request(scope, receive),
-                    name="review.html",
-                    context={
-                        "error": (
-                            "AI analysis is temporarily unavailable "
-                            "on the public site while resource "
-                            "protections are being added. Text "
-                            "extraction and preview still work."
-                        ),
-                        "agreement_text": ""
-                    },
-                    status_code=503,
-                    headers={"Cache-Control": "no-store"}
+                self._warn_if_proxy_rewritten(client_host, headers)
+
+                response = review_error_response(
+                    scope, receive,
+                    "AI analysis is temporarily unavailable "
+                    "on the public site while resource "
+                    "protections are being added. Text "
+                    "extraction and preview still work.",
+                    status_code=503
                 )
                 await response(scope, receive, send)
                 return
+
+            # 2. Fast reject while busy (before the upload is read
+            #    and without using the client's rate budget). The
+            #    route re-checks authoritatively when it acquires.
+            if (
+                self.inference_limiter is not None
+                and self.inference_limiter.busy
+            ):
+                response = review_error_response(
+                    scope, receive, AI_BUSY_MESSAGE,
+                    status_code=503,
+                    retry_after=AI_BUSY_RETRY_SECONDS
+                )
+                await response(scope, receive, send)
+                return
+
+            # 3. Per-client rate limit
+            if self.rate_limiter is not None:
+                allowed, retry_after = self.rate_limiter.hit(
+                    client_key(client_host, headers)
+                )
+
+                if not allowed:
+                    minutes = max(1, round(retry_after / 60))
+                    response = review_error_response(
+                        scope, receive,
+                        "Too many AI analysis requests. Please "
+                        f"wait about {minutes} minute(s) and "
+                        "try again.",
+                        status_code=429,
+                        retry_after=retry_after
+                    )
+                    await response(scope, receive, send)
+                    return
 
         await self.app(scope, receive, send)

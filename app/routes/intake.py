@@ -16,6 +16,8 @@ from fastapi.concurrency import run_in_threadpool
 from app.config import templates
 from app.agents.intake import run_intake_agent
 from app.services.document_parser import extract_document_text
+from app.services.ai_limits import LimiterBusy
+from app.security import AI_BUSY_MESSAGE, AI_BUSY_RETRY_SECONDS
 
 
 router = APIRouter()
@@ -119,11 +121,30 @@ async def analyze_agreement(
             "up to 6,000 characters."
         )
 
-    # Execute our Intake Agent
+    # Execute our Intake Agent inside the shared inference slot
+    # (released on success, error or cancellation)
+    limiter = request.app.state.ai_inference_limiter
+
     try:
-        analysis = await run_intake_agent(
-            text,
-            agreement_type
+        async with limiter.slot():
+            analysis = await run_intake_agent(
+                text,
+                agreement_type
+            )
+
+    except LimiterBusy:
+        return templates.TemplateResponse(
+            request=request,
+            name="review.html",
+            context={
+                "error": AI_BUSY_MESSAGE,
+                "agreement_text": ""
+            },
+            status_code=503,
+            headers={
+                "Retry-After": str(AI_BUSY_RETRY_SECONDS),
+                "Cache-Control": "no-store"
+            }
         )
 
     except Exception:

@@ -102,6 +102,18 @@ class SecuritySettings:
     # Enables /docs, /redoc and /openapi.json
     debug: bool = False
 
+    # AI resource protection (P0B.1). Conservative defaults for a
+    # CPU-only Ollama server: one inference at a time, and each
+    # client may start 3 analyses per 10 minutes.
+    ai_max_concurrent: int = 1
+    ai_rate_limit: int = 3
+    ai_rate_window_seconds: int = 600
+
+    # TEMPORARY team testing (P0B.1a): allow AI analysis for
+    # requests arriving through the local Cloudflare Tunnel.
+    # Off by default. Not production authorisation.
+    allow_tunnel_ai: bool = False
+
     @classmethod
     def from_env(
         cls,
@@ -124,6 +136,21 @@ class SecuritySettings:
             ),
             debug=_read_flag(
                 env, "TOR_LAW_DEBUG", default=False
+            ),
+            ai_max_concurrent=_read_int(
+                env, "TOR_LAW_AI_MAX_CONCURRENT",
+                default=1, minimum=1, maximum=4
+            ),
+            ai_rate_limit=_read_int(
+                env, "TOR_LAW_AI_RATE_LIMIT",
+                default=3, minimum=1, maximum=100
+            ),
+            ai_rate_window_seconds=_read_int(
+                env, "TOR_LAW_AI_RATE_WINDOW_SECONDS",
+                default=600, minimum=10, maximum=86400
+            ),
+            allow_tunnel_ai=_read_flag(
+                env, "TOR_LAW_ALLOW_TUNNEL_AI", default=False
             ),
         )
 

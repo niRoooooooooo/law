@@ -41,9 +41,11 @@ def detect_language(text: str) -> str:
 
 def extract_numbered_clauses(text: str):
 
+    # \r? : in (?m) mode "$" only matches before "\n", so CRLF
+    # (Windows / browser textarea) lines need the "\r" allowed
     pattern = re.compile(
         r"(?m)^[ \t]*(\d{1,2})\.[ \t]+"
-        r"([^\r\n]{3,100})[ \t]*$"
+        r"([^\r\n]{3,100})[ \t]*\r?$"
     )
 
     matches = list(pattern.finditer(text))
