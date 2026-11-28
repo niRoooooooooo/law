@@ -133,24 +133,20 @@
     <!-- ADMIN KEY -->
 
     <section class="card">
-        <h2>Admin Access</h2>
-
-        <label for="adminKey">Admin API Key</label>
-        <input
-            type="password"
-            id="adminKey"
-            autocomplete="off"
-            placeholder="Enter your admin key"
-        >
-
-        <button type="button" id="loadButton">
-            Load Legal Sources
-        </button>
+        <h2>Admin Session</h2>
 
         <p class="muted">
-            The key is used for API requests and is
-            not saved in browser storage.
+            You are signed in as an administrator.
+            The session expires automatically.
         </p>
+
+        <button type="button" id="loadButton">
+            Reload Legal Sources
+        </button>
+
+        <button type="button" id="logoutButton">
+            Log Out
+        </button>
     </section>
 
     <!-- UPLOAD DOCUMENT -->
@@ -240,8 +236,7 @@
         <h2>Uploaded Legal Documents</h2>
 
         <div id="documentList">
-            Enter your admin key and click
-            Load Legal Sources.
+            Loading legal sources...
         </div>
     </section>
 
@@ -265,15 +260,11 @@ Select View Sections beside a document.
     const getElement = (id) =>
         document.getElementById(id);
 
+    // Auth uses the HttpOnly session cookie (never readable here).
+    // This header proves the request came from this page (CSRF guard).
     function getHeaders() {
-        const key = getElement("adminKey").value.trim();
-
-        if (!key) {
-            throw new Error("Enter your admin key first.");
-        }
-
         return {
-            "X-Admin-Key": key
+            "X-Admin-Request": "1"
         };
     }
 
@@ -285,11 +276,18 @@ Select View Sections beside a document.
         const response = await fetch(API + path, {
             ...options,
             cache: "no-store",
+            credentials: "same-origin",
             headers: {
                 ...getHeaders(),
                 ...(options.headers || {})
             }
         });
+
+        // Session missing or expired: back to login
+        if (response.status === 401 || response.status === 403) {
+            window.location.assign("/admin/login");
+            throw new Error("Admin session expired.");
+        }
 
         const data = await response.json();
 
@@ -510,14 +508,33 @@ Select View Sections beside a document.
         }
     }
 
-    getElement("loadButton").onclick = async () => {
+    async function reloadDocuments() {
         try {
             await loadDocuments();
             setStatus("Legal sources loaded.");
         } catch (error) {
             setStatus("Error: " + error.message);
         }
+    }
+
+    getElement("loadButton").onclick = reloadDocuments;
+
+    getElement("logoutButton").onclick = async () => {
+        try {
+            await fetch("/admin/logout", {
+                method: "POST",
+                cache: "no-store",
+                credentials: "same-origin",
+                headers: getHeaders()
+            });
+        } finally {
+            window.location.assign("/admin/login");
+        }
     };
+
+    // Load immediately: the server only serves this page
+    // to a signed-in administrator.
+    reloadDocuments();
 </script>
 
 </body>

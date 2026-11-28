@@ -1,6 +1,4 @@
 
-import hmac
-import os
 import re
 
 from pathlib import Path
@@ -8,13 +6,11 @@ from tempfile import TemporaryDirectory
 from typing import Literal
 from uuid import UUID
 
-from dotenv import load_dotenv
 from fastapi import (
     APIRouter,
     Depends,
     File,
     Form,
-    Header,
     HTTPException,
     Query,
     UploadFile,
@@ -22,38 +18,18 @@ from fastapi import (
 from pydantic import ValidationError
 
 from app.schemas.legal_source import LegalSourceCreate
+from app.security import require_admin
 from app.services.legal_repository import LegalRepository
 
-
-load_dotenv()
 
 MAX_FILE_SIZE = 15 * 1024 * 1024
 
 repository = LegalRepository()
 
 
-# Admin authentication
-def require_admin(
-    x_admin_key: str | None = Header(default=None)
-):
-    expected_key = os.getenv("TOR_LAW_ADMIN_KEY")
-
-    if not expected_key:
-        raise HTTPException(
-            status_code=503,
-            detail="Admin API key is not configured."
-        )
-
-    if not x_admin_key or not hmac.compare_digest(
-        x_admin_key,
-        expected_key
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="Invalid admin API key."
-        )
-
-
+# Admin authentication: X-Admin-Key header or admin browser
+# session (see app/security.py). Also enforced before the
+# request body is read by AccessControlMiddleware.
 router = APIRouter(
     prefix="/admin/legal-sources",
     tags=["Legal Sources"],

@@ -1,0 +1,107 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+
+    <title>Admin Login | Tor Lawyer</title>
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 60px 18px;
+            background: #f3f5f9;
+            color: #202c3d;
+            font-family: Arial, sans-serif;
+        }
+
+        main {
+            max-width: 420px;
+            margin: auto;
+            background: white;
+            border: 1px solid #e1e6ee;
+            border-radius: 12px;
+            padding: 28px;
+        }
+
+        h1 { font-size: 22px; margin-top: 0; }
+
+        .muted { color: #64748b; line-height: 1.5; }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin: 18px 0 6px;
+        }
+
+        input {
+            width: 100%;
+            padding: 11px;
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+        }
+
+        button {
+            width: 100%;
+            padding: 11px 17px;
+            border: 0;
+            background: #2455cd;
+            color: white;
+            border-radius: 7px;
+            cursor: pointer;
+            margin-top: 18px;
+        }
+
+        button:hover { background: #163e9e; }
+
+        .error {
+            background: #fdecec;
+            border: 1px solid #f5c2c2;
+            color: #9b1c1c;
+            border-radius: 7px;
+            padding: 10px 12px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+
+<body>
+<main>
+
+    <h1>Legal Sources — Administrator Login</h1>
+
+    <p class="muted">
+        This area is restricted to Tor Lawyer administrators.
+    </p>
+
+    {% if error %}
+    <div class="error" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="/admin/login">
+
+        <label for="adminKey">Administrator Key</label>
+        <input
+            type="password"
+            id="adminKey"
+            name="admin_key"
+            autocomplete="off"
+            required
+            autofocus
+        >
+
+        <button type="submit">Log In</button>
+    </form>
+
+    <p class="muted">
+        <a href="/review">Back to Agreement Review</a>
+    </p>
+
+</main>
+</body>
+</html>
